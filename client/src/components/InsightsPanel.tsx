@@ -65,7 +65,7 @@ export default function InsightsPanel({ tasks }: InsightsPanelProps) {
                 {incompleteTasks.slice(1, 4).map((task) => (
                   <div 
                     key={task.id}
-                    className="flex items-center gap-2 text-[12px] py-1 px-2 rounded-lg bg-white/[0.02] border border-white/[0.06]"
+                    className="flex items-center gap-2 text-[12px] py-1 px-2 rounded-lg bg-card border border-border[0.06]"
                     data-testid={`next-task-${task.id}`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full bg-category-${task.category.toLowerCase()}`} 

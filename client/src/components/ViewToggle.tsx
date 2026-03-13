@@ -10,7 +10,7 @@ interface ViewToggleProps {
 export default function ViewToggle({ scope, onScopeChange }: ViewToggleProps) {
   return (
     <div 
-      className="inline-flex p-0.5 rounded-full bg-white/[0.04] border border-white/[0.12] gap-1"
+      className="inline-flex p-0.5 rounded-full bg-card border border-border[0.12] gap-1"
       data-testid="view-toggle"
     >
       {(["week", "today"] as const).map((s) => (

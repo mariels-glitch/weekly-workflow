@@ -12,7 +12,7 @@ export default function Panel({ title, subtitle, headerActions, children, classN
   return (
     <section
       className={cn(
-        "glassmorphic rounded-[22px] p-4 md:p-[18px] border border-white/[0.08] shadow-xl relative overflow-hidden panel-glow",
+        "glassmorphic rounded-[22px] p-4 md:p-[18px] border border-border[0.08] shadow-xl relative overflow-hidden panel-glow",
         className
       )}
       data-testid="panel-container"

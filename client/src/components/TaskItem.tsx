@@ -26,10 +26,10 @@ const categoryColors: Record<TaskCategory, string> = {
 };
 
 const categoryTextColors: Record<TaskCategory, string> = {
-  Core: "text-orange-200",
-  Ops: "text-green-200",
-  Strategy: "text-cyan-200",
-  People: "text-purple-200",
+  Core: "text-orange-700",
+  Ops: "text-green-700",
+  Strategy: "text-cyan-700",
+  People: "text-purple-700",
 };
 
 export default function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
@@ -37,9 +37,9 @@ export default function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
     <div
       className={cn(
         "grid grid-cols-[auto_1fr_auto] gap-2 items-center rounded-[14px] py-1.5 px-2 md:px-2.5",
-        "bg-white/[0.02] border border-white/[0.08] text-[12px]",
+        "bg-card border border-border text-[12px]",
         "transition-all duration-150",
-        "hover:bg-white/[0.04] hover:border-white/[0.18] hover:translate-y-[-1px] hover:shadow-lg",
+        "hover:bg-muted/50 hover:border-border hover:translate-y-[-1px] hover:shadow-sm",
         task.completed && "opacity-60 bg-green-500/[0.05] border-green-500/[0.28]"
       )}
       data-testid={`task-item-${task.id}`}
@@ -51,13 +51,13 @@ export default function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
           "transition-all duration-150",
           task.completed
             ? "border-green-500/80 glow-success"
-            : "border-white/[0.36] bg-gradient-to-b from-white/[0.12] to-white/[0.02]"
+            : "border-border bg-background"
         )}
         style={task.completed ? { background: "radial-gradient(circle at top, #32d74b, #00c853)" } : {}}
         data-testid={`button-toggle-task-${task.id}`}
       >
         {task.completed && (
-          <div className="w-2.5 h-2.5 rounded bg-[#0b0c10]" />
+          <div className="w-2.5 h-2.5 rounded bg-white" />
         )}
       </button>
 
@@ -75,7 +75,7 @@ export default function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
           <span
             className={cn(
               "rounded-full py-0.5 px-1.5 inline-flex items-center gap-1",
-              "bg-primary/[0.15]",
+              "bg-primary/[0.1]",
               categoryTextColors[task.category]
             )}
             data-testid={`badge-category-${task.id}`}
@@ -85,7 +85,7 @@ export default function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
           </span>
           {task.timeEstimate && (
             <span 
-              className="rounded-full py-0.5 px-1.5 bg-white/[0.04] border border-white/[0.08]"
+              className="rounded-full py-0.5 px-1.5 bg-muted border border-border"
               data-testid={`text-time-estimate-${task.id}`}
             >
               {task.timeEstimate}
@@ -104,7 +104,7 @@ export default function TaskItem({ task, onToggle, onDelete }: TaskItemProps) {
 
       <button
         onClick={() => onDelete(task.id)}
-        className="rounded-full bg-transparent text-white/30 cursor-pointer text-[14px] px-1 transition-all duration-150 hover:text-destructive hover:translate-y-[-0.5px] hover:scale-[1.05]"
+        className="rounded-full bg-transparent text-muted-foreground cursor-pointer text-[14px] px-1 transition-all duration-150 hover:text-destructive hover:translate-y-[-0.5px] hover:scale-[1.05]"
         data-testid={`button-delete-task-${task.id}`}
       >
         <X className="w-4 h-4" />

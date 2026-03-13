@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, ExternalLink, Trash2 } from "lucide-react";
+import { X, Plus, ExternalLink, Trash2, CalendarDays, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useWorkflow } from "@/context/WorkflowContext";
-import type { Task, Priority, WorkstreamLabel } from "@/types/workflow";
+import type { Task, Priority } from "@/types/workflow";
 import { PRIORITY_COLORS } from "@/types/workflow";
+import { addDays, parseISO, format, startOfWeek } from "date-fns";
 
 interface TaskEditDialogProps {
   task: Task | null;
@@ -29,19 +30,43 @@ interface TaskEditDialogProps {
   defaultWorkstreamId?: string;
 }
 
-export default function TaskEditDialog({ 
-  task, 
-  isOpen, 
+function getDayIndex(date: Date): number {
+  return (date.getDay() + 6) % 7;
+}
+
+function getWeekOf(date: Date): string {
+  return format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
+}
+
+function dateFromTask(weekOf: string, dayIndex: number): Date {
+  return addDays(parseISO(weekOf), dayIndex);
+}
+
+function dateToInputValue(date: Date): string {
+  return format(date, "yyyy-MM-dd");
+}
+
+export default function TaskEditDialog({
+  task,
+  isOpen,
   onClose,
   defaultDayIndex = 0,
   defaultWorkstreamId,
 }: TaskEditDialogProps) {
-  const { workstreams, labels, addTask, updateTask, deleteTask, addLabel, getLabelsForWorkstream } = useWorkflow();
-  
+  const {
+    workstreams,
+    addTask,
+    updateTask,
+    deleteTask,
+    addLabel,
+    getLabelsForWorkstream,
+    currentWeekStart,
+  } = useWorkflow();
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [workstreamId, setWorkstreamId] = useState("");
-  const [dayIndex, setDayIndex] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [priority, setPriority] = useState<Priority>("none");
   const [externalLink, setExternalLink] = useState("");
@@ -50,6 +75,7 @@ export default function TaskEditDialog({
   const [newLabelColor, setNewLabelColor] = useState("#0a84ff");
 
   const isEditing = task !== null;
+  const isBacklog = selectedDate === null;
   const availableLabels = getLabelsForWorkstream(workstreamId);
 
   useEffect(() => {
@@ -57,31 +83,50 @@ export default function TaskEditDialog({
       setTitle(task.title);
       setDescription(task.description || "");
       setWorkstreamId(task.workstreamId);
-      setDayIndex(task.dayIndex);
       setSelectedLabels(task.labelIds);
-      setPriority(task.priority);
+      setPriority(task.priority as Priority);
       setExternalLink(task.externalLink || "");
+      if (task.dayIndex === -1) {
+        setSelectedDate(null);
+      } else if (task.weekOf) {
+        setSelectedDate(dateFromTask(task.weekOf, task.dayIndex));
+      } else {
+        setSelectedDate(addDays(currentWeekStart, task.dayIndex));
+      }
     } else {
       setTitle("");
       setDescription("");
       setWorkstreamId(defaultWorkstreamId || workstreams[0]?.id || "");
-      setDayIndex(defaultDayIndex);
       setSelectedLabels([]);
       setPriority("none");
       setExternalLink("");
+      if (defaultDayIndex === -1) {
+        setSelectedDate(null);
+      } else {
+        setSelectedDate(addDays(currentWeekStart, defaultDayIndex));
+      }
     }
     setShowNewLabel(false);
     setNewLabelName("");
-  }, [task, isOpen, defaultDayIndex, defaultWorkstreamId, workstreams]);
+  }, [task, isOpen, defaultDayIndex, defaultWorkstreamId, workstreams, currentWeekStart]);
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.value) return;
+    setSelectedDate(parseISO(e.target.value));
+  };
 
   const handleSave = () => {
     if (!title.trim() || !workstreamId) return;
+
+    const dayIndex = isBacklog ? -1 : getDayIndex(selectedDate!);
+    const weekOf = isBacklog ? null : getWeekOf(selectedDate!);
 
     const taskData = {
       title: title.trim(),
       description,
       workstreamId,
       dayIndex,
+      weekOf,
       labelIds: selectedLabels,
       priority,
       externalLink: externalLink.trim() || undefined,
@@ -104,31 +149,23 @@ export default function TaskEditDialog({
   };
 
   const toggleLabel = (labelId: string) => {
-    setSelectedLabels(prev => 
-      prev.includes(labelId) 
-        ? prev.filter(id => id !== labelId)
-        : [...prev, labelId]
+    setSelectedLabels((prev) =>
+      prev.includes(labelId) ? prev.filter((id) => id !== labelId) : [...prev, labelId]
     );
   };
 
   const handleAddLabel = () => {
     if (newLabelName.trim() && workstreamId) {
-      addLabel({
-        name: newLabelName.trim(),
-        color: newLabelColor,
-        workstreamId,
-      });
+      addLabel({ name: newLabelName.trim(), color: newLabelColor, workstreamId });
       setNewLabelName("");
       setShowNewLabel(false);
     }
   };
 
-  const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent 
-        className="glassmorphic border-white/[0.12] max-w-md"
+      <DialogContent
+        className="glassmorphic border-border max-w-md"
         data-testid="task-edit-dialog"
       >
         <DialogHeader>
@@ -143,7 +180,7 @@ export default function TaskEditDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Task title..."
-              className="bg-black/40 border-white/[0.12] text-[13px] focus-visible:ring-primary/50"
+              className="bg-muted/50 border-border text-[13px] focus-visible:ring-primary/50"
               autoFocus
               data-testid="input-task-title"
             />
@@ -154,57 +191,86 @@ export default function TaskEditDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Description (optional)..."
-              className="bg-black/40 border-white/[0.12] text-[13px] min-h-[60px] resize-none focus-visible:ring-primary/50"
+              className="bg-muted/50 border-border text-[13px] min-h-[60px] resize-none focus-visible:ring-primary/50"
               data-testid="input-task-description"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                Workstream
-              </label>
-              <Select value={workstreamId} onValueChange={setWorkstreamId}>
-                <SelectTrigger 
-                  className="bg-black/40 border-white/[0.12] text-[12px] h-9"
-                  data-testid="select-workstream"
-                >
-                  <SelectValue placeholder="Select workstream" />
-                </SelectTrigger>
-                <SelectContent>
-                  {workstreams.map(ws => (
-                    <SelectItem key={ws.id} value={ws.id}>
-                      <div className="flex items-center gap-2">
-                        <span 
-                          className="w-2 h-2 rounded-full" 
-                          style={{ backgroundColor: ws.color }}
-                        />
-                        {ws.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <label className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 block">
+              Workstream
+            </label>
+            <Select value={workstreamId} onValueChange={setWorkstreamId}>
+              <SelectTrigger
+                className="bg-muted/50 border-border text-[12px] h-9"
+                data-testid="select-workstream"
+              >
+                <SelectValue placeholder="Select workstream" />
+              </SelectTrigger>
+              <SelectContent>
+                {workstreams.map((ws) => (
+                  <SelectItem key={ws.id} value={ws.id}>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: ws.color }}
+                      />
+                      {ws.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div>
-              <label className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                Day
-              </label>
-              <Select value={dayIndex.toString()} onValueChange={(v) => setDayIndex(parseInt(v))}>
-                <SelectTrigger 
-                  className="bg-black/40 border-white/[0.12] text-[12px] h-9"
-                  data-testid="select-day"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {dayLabels.map((day, i) => (
-                    <SelectItem key={i} value={i.toString()}>{day}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div>
+            <label className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5 block">
+              Schedule
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedDate(null)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] border transition-all duration-150",
+                  isBacklog
+                    ? "bg-muted border-border text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                )}
+                data-testid="button-backlog"
+              >
+                <Archive className="w-3.5 h-3.5" />
+                Backlog
+              </button>
+
+              <div
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-2.5 py-1.5 border transition-all duration-150 flex-1",
+                  !isBacklog
+                    ? "bg-muted border-border"
+                    : "border-transparent opacity-60"
+                )}
+              >
+                <CalendarDays className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <input
+                  type="date"
+                  value={selectedDate ? dateToInputValue(selectedDate) : ""}
+                  onChange={handleDateChange}
+                  onFocus={() => {
+                    if (!selectedDate) {
+                      setSelectedDate(addDays(currentWeekStart, 0));
+                    }
+                  }}
+                  className="bg-transparent text-[12px] text-foreground outline-none w-full cursor-pointer"
+                  data-testid="input-task-date"
+                />
+              </div>
             </div>
+            {!isBacklog && selectedDate && (
+              <p className="text-[11px] text-muted-foreground mt-1 ml-0.5">
+                {format(selectedDate, "EEEE, MMM d, yyyy")}
+              </p>
+            )}
           </div>
 
           <div>
@@ -218,15 +284,15 @@ export default function TaskEditDialog({
                   onClick={() => setPriority(p)}
                   className={cn(
                     "rounded-full px-3 py-1 text-[11px] font-medium border transition-all duration-150",
-                    priority === p 
-                      ? "border-white/30" 
-                      : "border-transparent bg-white/[0.04]",
-                    p === "none" && "text-muted-foreground",
+                    priority === p ? "border-border" : "border-transparent bg-muted",
+                    p === "none" && "text-muted-foreground"
                   )}
-                  style={{ 
-                    backgroundColor: priority === p && p !== "none" ? `${PRIORITY_COLORS[p]}30` : undefined,
+                  style={{
+                    backgroundColor:
+                      priority === p && p !== "none" ? `${PRIORITY_COLORS[p]}30` : undefined,
                     color: p !== "none" ? PRIORITY_COLORS[p] : undefined,
-                    borderColor: priority === p && p !== "none" ? PRIORITY_COLORS[p] : undefined,
+                    borderColor:
+                      priority === p && p !== "none" ? PRIORITY_COLORS[p] : undefined,
                   }}
                   data-testid={`button-priority-${p}`}
                 >
@@ -241,17 +307,17 @@ export default function TaskEditDialog({
               Labels
             </label>
             <div className="flex flex-wrap gap-1.5 min-h-[32px]" data-testid="labels-selector">
-              {availableLabels.map(label => (
+              {availableLabels.map((label) => (
                 <button
                   key={label.id}
                   onClick={() => toggleLabel(label.id)}
                   className={cn(
                     "rounded-full px-2.5 py-1 text-[11px] border transition-all duration-150",
-                    selectedLabels.includes(label.id) 
-                      ? "border-white/30" 
+                    selectedLabels.includes(label.id)
+                      ? "border-border"
                       : "border-transparent opacity-60 hover:opacity-100"
                   )}
-                  style={{ 
+                  style={{
                     backgroundColor: `${label.color}30`,
                     color: label.color,
                     borderColor: selectedLabels.includes(label.id) ? label.color : undefined,
@@ -261,14 +327,14 @@ export default function TaskEditDialog({
                   {label.name}
                 </button>
               ))}
-              
+
               {showNewLabel ? (
                 <div className="flex items-center gap-1.5">
                   <Input
                     value={newLabelName}
                     onChange={(e) => setNewLabelName(e.target.value)}
                     placeholder="Label name"
-                    className="h-7 w-24 bg-black/40 border-white/[0.12] text-[11px]"
+                    className="h-7 w-24 bg-muted/50 border-border text-[11px]"
                     onKeyDown={(e) => e.key === "Enter" && handleAddLabel()}
                     data-testid="input-new-label"
                   />
@@ -282,9 +348,9 @@ export default function TaskEditDialog({
                   <Button size="sm" onClick={handleAddLabel} className="h-7 px-2">
                     <Plus className="w-3 h-3" />
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     onClick={() => setShowNewLabel(false)}
                     className="h-7 px-2"
                   >
@@ -294,7 +360,7 @@ export default function TaskEditDialog({
               ) : (
                 <button
                   onClick={() => setShowNewLabel(true)}
-                  className="rounded-full px-2 py-1 text-[11px] text-muted-foreground border border-dashed border-white/[0.12] hover:border-white/30 transition-all"
+                  className="rounded-full px-2 py-1 text-[11px] text-muted-foreground border border-dashed border-border hover:border-foreground/30 transition-all"
                   data-testid="button-add-label"
                 >
                   <Plus className="w-3 h-3 inline mr-0.5" />
@@ -314,14 +380,14 @@ export default function TaskEditDialog({
                 value={externalLink}
                 onChange={(e) => setExternalLink(e.target.value)}
                 placeholder="https://..."
-                className="bg-black/40 border-white/[0.12] text-[12px] pl-8 focus-visible:ring-primary/50"
+                className="bg-muted/50 border-border text-[12px] pl-8 focus-visible:ring-primary/50"
                 data-testid="input-external-link"
               />
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2 mt-4 pt-4 border-t border-white/[0.08]">
+        <div className="flex items-center justify-between gap-2 mt-4 pt-4 border-t border-border">
           {isEditing ? (
             <Button
               variant="ghost"
@@ -340,8 +406,8 @@ export default function TaskEditDialog({
             <Button variant="ghost" size="sm" onClick={onClose} data-testid="button-cancel">
               Cancel
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               onClick={handleSave}
               className="gradient-primary"
               disabled={!title.trim() || !workstreamId}

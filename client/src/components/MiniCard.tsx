@@ -11,7 +11,7 @@ export default function MiniCard({ label, value, meta, className }: MiniCardProp
   return (
     <div
       className={cn(
-        "rounded-[16px] py-2 px-2.5 bg-white/[0.02] border border-white/[0.08] text-[11px] flex flex-col gap-0.5",
+        "rounded-[16px] py-2 px-2.5 bg-card border border-border[0.08] text-[11px] flex flex-col gap-0.5",
         className
       )}
       data-testid="mini-card"

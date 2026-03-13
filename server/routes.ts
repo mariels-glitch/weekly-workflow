@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { log } from "./index";
+import { generateTaskSuggestions } from "./ai";
 
 declare module "express-session" {
   interface SessionData {
@@ -250,7 +251,8 @@ export async function registerRoutes(
   });
 
   app.get("/api/tasks", requireAuth, async (req, res) => {
-    const result = await storage.getTasks(req.session.userId!);
+    const weekOf = typeof req.query.weekOf === "string" ? req.query.weekOf : undefined;
+    const result = await storage.getTasks(req.session.userId!, weekOf);
     res.json(result);
   });
 
@@ -260,6 +262,7 @@ export async function registerRoutes(
         title: z.string().min(1),
         workstreamId: z.string(),
         dayIndex: z.number().int().min(-1).max(6),
+        weekOf: z.string().nullable().optional(),
         completed: z.boolean().default(false),
         labelIds: z.array(z.string()).default([]),
         priority: z.string().default("none"),
@@ -292,6 +295,7 @@ export async function registerRoutes(
         title: z.string().min(1).optional(),
         workstreamId: z.string().optional(),
         dayIndex: z.number().int().min(-1).max(6).optional(),
+        weekOf: z.string().nullable().optional(),
         completed: z.boolean().optional(),
         labelIds: z.array(z.string()).optional(),
         priority: z.string().optional(),
@@ -322,6 +326,151 @@ export async function registerRoutes(
     const deleted = await storage.deleteTask(req.params.id, req.session.userId!);
     if (!deleted) return res.status(404).json({ message: "Not found" });
     res.json({ message: "Deleted" });
+  });
+
+  app.get("/api/integrations/status", requireAuth, async (_req, res) => {
+    res.json({
+      gmail: { connected: false, label: "Gmail" },
+      slack: { connected: false, label: "Slack" },
+      jira: { connected: false, label: "Jira" },
+    });
+  });
+
+  app.post("/api/integrations/:service/connect", requireAuth, async (req, res) => {
+    const service = req.params.service;
+    if (!["gmail", "slack", "jira"].includes(service)) {
+      return res.status(400).json({ message: "Unknown service" });
+    }
+    res.json({
+      message: `${service} integration is not yet configured. OAuth connection will be available in a future update.`,
+      service,
+      connected: false,
+    });
+  });
+
+  app.get("/api/ai/suggestions", requireAuth, async (req, res) => {
+    try {
+      const status = (req.query.status as string) || "pending";
+      const suggestions = await storage.getAiSuggestions(req.session.userId!, status);
+      res.json(suggestions);
+    } catch (error: any) {
+      log(`Fetch suggestions error: ${error.message}`, "ai");
+      res.status(500).json({ message: "Failed to fetch suggestions" });
+    }
+  });
+
+  app.post("/api/ai/suggest", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { context } = z.object({
+        context: z.string().max(10000).optional(),
+      }).parse(req.body || {});
+
+      const workstreams = await storage.getWorkstreams(userId);
+      const tasks = await storage.getTasks(userId);
+
+      const connectedSources = { gmail: false, slack: false, jira: false };
+
+      const sourceData: { gmail?: string; slack?: string; jira?: string; pasted?: string } = {};
+      if (context) {
+        sourceData.pasted = context;
+      }
+
+      const suggestions = await generateTaskSuggestions(
+        workstreams,
+        tasks,
+        connectedSources,
+        sourceData
+      );
+
+      await storage.clearAiSuggestions(userId, "pending");
+
+      const validPriorities = ["none", "low", "medium", "high", "urgent"];
+      const validSources = ["general", "gmail", "slack", "jira"];
+
+      const saved = [];
+      for (const s of suggestions) {
+        if (!s.title || typeof s.title !== "string") continue;
+
+        const matchedWorkstream = workstreams.find(
+          ws => ws.name.toLowerCase() === s.suggestedWorkstreamName?.toLowerCase()
+        );
+        const clampedDay = typeof s.suggestedDayIndex === "number"
+          ? Math.max(-1, Math.min(6, Math.floor(s.suggestedDayIndex)))
+          : -1;
+        const safePriority = validPriorities.includes(s.priority) ? s.priority : "none";
+        const safeSource = validSources.includes(s.source) ? s.source : "general";
+
+        const suggestion = await storage.createAiSuggestion({
+          userId,
+          title: s.title.slice(0, 500),
+          description: (s.description || "").slice(0, 2000),
+          suggestedWorkstreamId: matchedWorkstream?.id || null,
+          suggestedDayIndex: clampedDay,
+          priority: safePriority,
+          source: safeSource,
+          sourcePreview: (s.sourcePreview || "").slice(0, 500),
+          status: "pending",
+        });
+        saved.push(suggestion);
+      }
+
+      res.json(saved);
+    } catch (error: any) {
+      log(`AI suggestion error: ${error.message}`, "ai");
+      res.status(500).json({ message: "Failed to generate suggestions" });
+    }
+  });
+
+  app.patch("/api/ai/suggestions/:id/accept", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+
+      const pending = await storage.getAiSuggestions(userId, "pending");
+      const match = pending.find(s => s.id === req.params.id);
+      if (!match) return res.status(404).json({ message: "Not found" });
+
+      const workstreamId = match.suggestedWorkstreamId;
+      if (!workstreamId) {
+        return res.status(400).json({ message: "Suggestion has no workstream assigned" });
+      }
+
+      const ownsWorkstream = await verifyWorkstreamOwnership(workstreamId, userId);
+      if (!ownsWorkstream) {
+        return res.status(400).json({ message: "Suggested workstream no longer exists" });
+      }
+
+      const dayIndex = Math.max(-1, Math.min(6, match.suggestedDayIndex));
+
+      const task = await storage.createTask({
+        userId,
+        title: match.title,
+        workstreamId,
+        dayIndex,
+        completed: false,
+        labelIds: [],
+        priority: match.priority,
+        description: match.description || "",
+        externalLink: null,
+        timeEstimate: null,
+      });
+
+      const suggestion = await storage.updateAiSuggestionStatus(req.params.id, userId, "accepted");
+
+      res.json({ suggestion, task });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to accept suggestion" });
+    }
+  });
+
+  app.patch("/api/ai/suggestions/:id/decline", requireAuth, async (req, res) => {
+    try {
+      const suggestion = await storage.updateAiSuggestionStatus(req.params.id, req.session.userId!, "declined");
+      if (!suggestion) return res.status(404).json({ message: "Not found" });
+      res.json(suggestion);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to decline suggestion" });
+    }
   });
 
   return httpServer;

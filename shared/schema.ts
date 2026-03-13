@@ -40,6 +40,7 @@ export const tasks = pgTable("tasks", {
   title: text("title").notNull(),
   workstreamId: varchar("workstream_id").notNull().references(() => workstreams.id, { onDelete: "cascade" }),
   dayIndex: integer("day_index").notNull().default(0),
+  weekOf: text("week_of"),
   completed: boolean("completed").notNull().default(false),
   labelIds: text("label_ids").array().notNull().default(sql`'{}'::text[]`),
   priority: text("priority").notNull().default("none"),
@@ -48,11 +49,26 @@ export const tasks = pgTable("tasks", {
   timeEstimate: text("time_estimate"),
 });
 
+export const aiSuggestions = pgTable("ai_suggestions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  description: text("description").default(""),
+  suggestedWorkstreamId: varchar("suggested_workstream_id").references(() => workstreams.id, { onDelete: "set null" }),
+  suggestedDayIndex: integer("suggested_day_index").notNull().default(-1),
+  priority: text("priority").notNull().default("none"),
+  source: text("source").notNull().default("general"),
+  sourcePreview: text("source_preview").default(""),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertVerificationCodeSchema = createInsertSchema(verificationCodes).omit({ id: true });
 export const insertWorkstreamSchema = createInsertSchema(workstreams).omit({ id: true });
 export const insertLabelSchema = createInsertSchema(labels).omit({ id: true });
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true });
+export const insertAiSuggestionSchema = createInsertSchema(aiSuggestions).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -64,3 +80,5 @@ export type Label = typeof labels.$inferSelect;
 export type InsertLabel = z.infer<typeof insertLabelSchema>;
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type AiSuggestion = typeof aiSuggestions.$inferSelect;
+export type InsertAiSuggestion = z.infer<typeof insertAiSuggestionSchema>;

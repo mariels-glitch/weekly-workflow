@@ -36,7 +36,7 @@ export default function TaskInput({ onAddTask, selectedDayLabel = "This week" }:
 
   return (
     <div 
-      className="flex items-center gap-2 bg-black/60 rounded-[16px] p-2 md:p-2.5 border border-white/[0.16] mb-2.5"
+      className="flex items-center gap-2 bg-muted rounded-[16px] p-2 md:p-2.5 border border-border mb-2.5"
       data-testid="task-input-container"
     >
       <div className="flex-1 flex flex-col gap-1">
@@ -51,7 +51,7 @@ export default function TaskInput({ onAddTask, selectedDayLabel = "This week" }:
           />
           <Select value={category} onValueChange={(val) => setCategory(val as TaskCategory)}>
             <SelectTrigger 
-              className="w-auto min-w-[100px] h-auto rounded-full border border-white/[0.18] bg-white/[0.02] text-[11px] text-muted-foreground px-2 py-1"
+              className="w-auto min-w-[100px] h-auto rounded-full border border-border bg-background text-[11px] text-muted-foreground px-2 py-1"
               data-testid="select-category-trigger"
             >
               <SelectValue />
@@ -65,10 +65,10 @@ export default function TaskInput({ onAddTask, selectedDayLabel = "This week" }:
           </Select>
         </div>
         <div className="flex gap-2 text-[11px] text-muted-foreground flex-wrap">
-          <span className="rounded-full bg-white/[0.04] px-2 py-0.5 border border-white/[0.08]" data-testid="text-selected-day">
+          <span className="rounded-full bg-background px-2 py-0.5 border border-border" data-testid="text-selected-day">
             {selectedDayLabel}
           </span>
-          <span className="rounded-full bg-white/[0.04] px-2 py-0.5 border border-white/[0.08]">
+          <span className="rounded-full bg-background px-2 py-0.5 border border-border">
             Cmd + Enter to add
           </span>
         </div>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { format, startOfWeek, addDays, isToday } from "date-fns";
+import { format, addDays, isToday } from "date-fns";
 import { Plus, ExternalLink, GripVertical, ChevronDown, ChevronRight, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWorkflow } from "@/context/WorkflowContext";
@@ -39,8 +39,8 @@ function DraggableListItem({ task, onClick }: DraggableListItemProps) {
     <div
       ref={setNodeRef}
       className={cn(
-        "group flex items-center gap-3 p-3 border-b border-white/[0.06] cursor-pointer transition-all duration-150",
-        "hover:bg-white/[0.03]",
+        "group flex items-center gap-3 p-3 border-b border-border cursor-pointer transition-all duration-150",
+        "hover:bg-muted/50",
         task.completed && "opacity-60",
         isDragging && "opacity-50"
       )}
@@ -65,13 +65,13 @@ function DraggableListItem({ task, onClick }: DraggableListItemProps) {
           "w-5 h-5 rounded-md border flex-shrink-0 flex items-center justify-center transition-all duration-150",
           task.completed
             ? "border-green-500/80"
-            : "border-white/30 bg-gradient-to-b from-white/10 to-white/[0.02]"
+            : "border-border bg-background"
         )}
         style={task.completed ? { background: "radial-gradient(circle at top, #32d74b, #00c853)" } : {}}
         data-testid={`checkbox-list-${task.id}`}
       >
         {task.completed && (
-          <div className="w-2 h-2 rounded-sm bg-[#0b0c10]" />
+          <div className="w-2 h-2 rounded-sm bg-white" />
         )}
       </button>
 
@@ -107,7 +107,7 @@ function DraggableListItem({ task, onClick }: DraggableListItemProps) {
         
         {workstream && (
           <span
-            className="inline-flex items-center gap-1 text-[10px] rounded-full px-2 py-0.5 bg-white/[0.06] text-muted-foreground"
+            className="inline-flex items-center gap-1 text-[10px] rounded-full px-2 py-0.5 bg-muted text-muted-foreground"
           >
             <span 
               className="w-1.5 h-1.5 rounded-full" 
@@ -144,7 +144,7 @@ function ListItemOverlay({ task }: { task: Task }) {
 
   return (
     <div
-      className="flex items-center gap-3 p-3 rounded-lg bg-[#1a1b1f] border border-white/20 shadow-2xl"
+      className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border shadow-2xl"
       style={{ width: 400 }}
     >
       <GripVertical className="w-4 h-4 text-muted-foreground" />
@@ -165,7 +165,7 @@ function ListItemOverlay({ task }: { task: Task }) {
         )}
         {workstream && (
           <span
-            className="inline-flex items-center gap-1 text-[10px] rounded-full px-2 py-0.5 bg-white/[0.06] text-muted-foreground"
+            className="inline-flex items-center gap-1 text-[10px] rounded-full px-2 py-0.5 bg-muted text-muted-foreground"
           >
             <span 
               className="w-1.5 h-1.5 rounded-full" 
@@ -201,7 +201,7 @@ function DroppableDaySection({ dayIndex, day, children, taskCount, onAddTask, ha
     <div 
       className={cn(
         "rounded-xl border overflow-hidden transition-colors duration-200",
-        "bg-white/[0.02] border-white/[0.08]",
+        "bg-card border-border",
         isTodaySection && "border-primary/30",
         isOver && "ring-2 ring-primary/40"
       )}
@@ -210,7 +210,7 @@ function DroppableDaySection({ dayIndex, day, children, taskCount, onAddTask, ha
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className={cn(
-          "w-full flex items-center justify-between p-3 border-b border-white/[0.06]",
+          "w-full flex items-center justify-between p-3 border-b border-border",
           isTodaySection && "bg-primary/[0.04]"
         )}
       >
@@ -251,7 +251,7 @@ function DroppableDaySection({ dayIndex, day, children, taskCount, onAddTask, ha
             className={cn(
               "w-full text-[12px] py-2 transition-all flex items-center justify-center gap-1",
               hasActiveWorkstreams 
-                ? "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+                ? "text-muted-foreground hover:bg-muted hover:text-foreground"
                 : "text-muted-foreground/40 cursor-not-allowed"
             )}
             data-testid={`button-add-list-item-${dayIndex}`}
@@ -282,12 +282,12 @@ function DroppableBacklog({ onAddTask, onEditTask }: DroppableBacklogProps) {
 
   return (
     <div
-      className="mt-4 glassmorphic rounded-[22px] border border-white/[0.08] shadow-xl relative overflow-hidden"
+      className="mt-4 glassmorphic rounded-[22px] border border-border shadow-sm relative overflow-hidden"
       data-testid="list-backlog-section"
     >
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 border-b border-white/[0.08]"
+        className="w-full flex items-center justify-between p-4 border-b border-border"
       >
         <div className="flex items-center gap-2">
           {isExpanded ? (
@@ -332,7 +332,7 @@ function DroppableBacklog({ onAddTask, onEditTask }: DroppableBacklogProps) {
               e.stopPropagation();
               onAddTask();
             }}
-            className="w-full text-[12px] py-2 transition-all flex items-center justify-center gap-1 text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+            className="w-full text-[12px] py-2 transition-all flex items-center justify-center gap-1 text-muted-foreground hover:bg-muted hover:text-foreground"
             data-testid="button-add-list-backlog"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -351,8 +351,8 @@ export default function ListView() {
   const [newTaskContext, setNewTaskContext] = useState<{ workstreamId: string; dayIndex: number } | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const { currentWeekStart } = useWorkflow();
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -441,7 +441,7 @@ export default function ListView() {
       onDragEnd={handleDragEnd}
     >
       <div 
-        className="glassmorphic rounded-[22px] p-4 border border-white/[0.08] shadow-xl relative overflow-hidden panel-glow"
+        className="glassmorphic rounded-[22px] p-4 border border-border shadow-sm relative overflow-hidden panel-glow"
         data-testid="list-view"
       >
         <div className="relative z-10">

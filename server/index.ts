@@ -9,6 +9,8 @@ import { pool } from "./db";
 const app = express();
 const httpServer = createServer(app);
 
+app.set("trust proxy", 1);
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
@@ -82,6 +84,22 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // One-time migration: backfill weekOf for existing scheduled tasks
+  try {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    const weekOf = monday.toISOString().split("T")[0];
+    await pool.query(
+      "UPDATE tasks SET week_of = $1 WHERE week_of IS NULL AND day_index >= 0",
+      [weekOf]
+    );
+  } catch (e) {
+    // Non-fatal — column may not exist yet in some envs
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

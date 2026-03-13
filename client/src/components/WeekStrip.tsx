@@ -23,9 +23,9 @@ export default function WeekStrip({ selectedDate, onSelectDate }: WeekStripProps
             onClick={() => onSelectDate(day)}
             className={cn(
               "rounded-[14px] py-2 px-1.5 text-center text-[11px] cursor-pointer select-none border transition-all duration-150",
-              "bg-white/[0.02] border-transparent",
+              "bg-card border-transparent",
               "hover:translate-y-[-1px] hover:shadow-lg",
-              isTodayDate && !isSelected && "border-white/[0.26]",
+              isTodayDate && !isSelected && "border-border[0.26]",
               isSelected && "gradient-primary border-transparent text-foreground glow-primary shadow-[0_18px_40px_rgba(10,132,255,0.5)]"
             )}
             data-testid={`button-day-${format(day, 'yyyy-MM-dd')}`}

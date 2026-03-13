@@ -12,7 +12,7 @@ export default function AppHeader({ userName = "Product Manager", userInitials =
 
   return (
     <header 
-      className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-3.5 rounded-full glassmorphic-header border border-white/[0.16] shadow-xl"
+      className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-3.5 rounded-full glassmorphic-header border border-border shadow-sm"
       data-testid="app-header"
     >
       <div className="flex items-center gap-2.5">
@@ -34,7 +34,7 @@ export default function AppHeader({ userName = "Product Manager", userInitials =
 
       <div className="flex items-center gap-2.5 flex-wrap">
         <div 
-          className="rounded-full border border-white/[0.18] bg-black/40 text-muted-foreground text-[11px] px-2.5 py-1 inline-flex items-center gap-1.5"
+          className="rounded-full border border-border bg-muted text-muted-foreground text-[11px] px-2.5 py-1 inline-flex items-center gap-1.5"
           data-testid="status-pill"
         >
           <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_0_4px_rgba(10,132,255,0.18)]" />
@@ -43,8 +43,8 @@ export default function AppHeader({ userName = "Product Manager", userInitials =
         <span className="text-[13px] text-muted-foreground" data-testid="text-today-date">
           {formattedDate}
         </span>
-        <Avatar className="w-7 h-7 border border-white/[0.24] shadow-lg" data-testid="avatar-user">
-          <AvatarFallback className="bg-gradient-to-br from-[#1f1f2b] to-[#101018] text-[12px] font-semibold text-foreground">
+        <Avatar className="w-7 h-7 border border-border shadow-sm" data-testid="avatar-user">
+          <AvatarFallback className="bg-muted text-[12px] font-semibold text-foreground">
             {userInitials}
           </AvatarFallback>
         </Avatar>

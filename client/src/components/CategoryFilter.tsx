@@ -25,7 +25,7 @@ export default function CategoryFilter({ selected, onSelect }: CategoryFilterPro
           onClick={() => onSelect(cat.value)}
           className={cn(
             "rounded-full py-1 px-2.5 cursor-pointer inline-flex items-center gap-1 transition-all duration-150",
-            "bg-white/[0.02] border border-white/[0.1] text-muted-foreground",
+            "bg-card border border-border[0.1] text-muted-foreground",
             selected === cat.value && "bg-primary/[0.22] border-primary/80 text-blue-100 translate-y-[-1px]"
           )}
           data-testid={`button-filter-${cat.value.toLowerCase()}`}

@@ -17,7 +17,7 @@ export default function ProgressBar({ completed, total, className }: ProgressBar
       <span data-testid="text-progress-stats">
         <strong className="font-semibold text-foreground">{completed}</strong> / {total} complete
       </span>
-      <div className="relative h-1.5 rounded-full bg-white/[0.06] flex-1 min-w-[100px] overflow-hidden">
+      <div className="relative h-1.5 rounded-full bg-card flex-1 min-w-[100px] overflow-hidden">
         <div
           className="absolute inset-0 rounded-full transition-all duration-300 ease-out"
           style={{ 

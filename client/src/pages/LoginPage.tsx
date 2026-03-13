@@ -51,7 +51,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0c10] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-[24px] font-bold text-foreground tracking-tight">
@@ -62,7 +62,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </p>
         </div>
 
-        <div className="glassmorphic rounded-[22px] border border-white/[0.08] p-6 shadow-xl">
+        <div className="glassmorphic rounded-[22px] border border-border p-6 shadow-md">
           {step === "email" ? (
             <form onSubmit={handleSendCode} className="space-y-4">
               <div>
@@ -77,14 +77,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-lg text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 bg-muted/50 border border-border rounded-lg text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all"
                     data-testid="input-email"
                   />
                 </div>
               </div>
 
               {error && (
-                <p className="text-[12px] text-red-400" data-testid="text-error">{error}</p>
+                <p className="text-[12px] text-destructive" data-testid="text-error">{error}</p>
               )}
 
               <button
@@ -139,7 +139,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     placeholder="000000"
                     required
                     maxLength={6}
-                    className="w-full pl-10 pr-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-lg text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all tracking-[0.3em] text-center font-mono"
+                    className="w-full pl-10 pr-4 py-2.5 bg-muted/50 border border-border rounded-lg text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all tracking-[0.3em] text-center font-mono"
                     data-testid="input-code"
                     autoFocus
                   />
@@ -147,7 +147,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               </div>
 
               {error && (
-                <p className="text-[12px] text-red-400" data-testid="text-error">{error}</p>
+                <p className="text-[12px] text-destructive" data-testid="text-error">{error}</p>
               )}
 
               <button

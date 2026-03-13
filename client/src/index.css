@@ -55,6 +55,13 @@
   --shadow-lg: 0px 2px 0px 0px hsl(0 0% 0% / 0.05), 0px 4px 6px -1px hsl(0 0% 0% / 0.1);
   --shadow-xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.05), 0px 8px 10px -1px hsl(0 0% 0% / 0.1);
   --shadow-2xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.05);
+  --col-tint-pink: 350 80% 96%;
+  --col-tint-mint: 160 50% 95%;
+  --col-tint-beige: 35 60% 95%;
+  --col-tint-lavender: 260 50% 96%;
+  --col-tint-sky: 200 60% 95%;
+  --col-tint-peach: 20 70% 95%;
+  --col-tint-sage: 140 30% 94%;
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -177,21 +184,18 @@
   }
 
   body {
-    @apply font-sans antialiased text-foreground;
-    background: radial-gradient(circle at top, hsl(230 20% 8%) 0%, hsl(230 20% 3%) 52%, hsl(230 25% 2%) 100%);
+    @apply font-sans antialiased text-foreground bg-background;
     min-height: 100vh;
   }
 }
 
 @layer utilities {
   .glassmorphic {
-    @apply backdrop-blur-xl;
-    background: linear-gradient(145deg, rgba(18, 18, 24, 0.9), rgba(5, 5, 9, 0.95));
+    @apply bg-card;
   }
 
   .glassmorphic-header {
-    @apply backdrop-blur-xl;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+    @apply bg-card;
   }
 
   .glow-primary {
@@ -215,7 +219,7 @@
 
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
   }
 
   .scrollbar-thin::-webkit-scrollbar {
@@ -227,7 +231,7 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.1);
     border-radius: 999px;
   }
 
@@ -235,7 +239,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at top left, rgba(10, 132, 255, 0.09), transparent 55%);
+    background: radial-gradient(circle at top left, rgba(10, 132, 255, 0.04), transparent 55%);
     pointer-events: none;
     border-radius: inherit;
   }

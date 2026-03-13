@@ -1,12 +1,13 @@
-import { eq, and, lt, desc } from "drizzle-orm";
+import { eq, and, lt, desc, or, isNull } from "drizzle-orm";
 import { db } from "./db";
 import {
-  users, verificationCodes, workstreams, labels, tasks,
+  users, verificationCodes, workstreams, labels, tasks, aiSuggestions,
   type User, type InsertUser,
   type VerificationCode, type InsertVerificationCode,
   type Workstream, type InsertWorkstream,
   type Label, type InsertLabel,
   type Task, type InsertTask,
+  type AiSuggestion, type InsertAiSuggestion,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -29,10 +30,16 @@ export interface IStorage {
   updateLabel(id: string, userId: string, updates: Partial<Omit<InsertLabel, "userId">>): Promise<Label | undefined>;
   deleteLabel(id: string, userId: string): Promise<boolean>;
 
-  getTasks(userId: string): Promise<Task[]>;
+  getTasks(userId: string, weekOf?: string): Promise<Task[]>;
   createTask(data: InsertTask): Promise<Task>;
   updateTask(id: string, userId: string, updates: Partial<Omit<InsertTask, "userId">>): Promise<Task | undefined>;
   deleteTask(id: string, userId: string): Promise<boolean>;
+
+  getAiSuggestions(userId: string, status?: string): Promise<AiSuggestion[]>;
+  createAiSuggestion(data: InsertAiSuggestion): Promise<AiSuggestion>;
+  updateAiSuggestionStatus(id: string, userId: string, status: string): Promise<AiSuggestion | undefined>;
+  deleteAiSuggestion(id: string, userId: string): Promise<boolean>;
+  clearAiSuggestions(userId: string, status?: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -128,7 +135,18 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async getTasks(userId: string): Promise<Task[]> {
+  async getTasks(userId: string, weekOf?: string): Promise<Task[]> {
+    if (weekOf) {
+      return db.select().from(tasks).where(
+        and(
+          eq(tasks.userId, userId),
+          or(
+            eq(tasks.weekOf, weekOf),
+            eq(tasks.dayIndex, -1),
+          )
+        )
+      );
+    }
     return db.select().from(tasks).where(eq(tasks.userId, userId));
   }
 
@@ -150,6 +168,46 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(tasks.id, id), eq(tasks.userId, userId)))
       .returning();
     return result.length > 0;
+  }
+  async getAiSuggestions(userId: string, status?: string): Promise<AiSuggestion[]> {
+    if (status) {
+      return db.select().from(aiSuggestions)
+        .where(and(eq(aiSuggestions.userId, userId), eq(aiSuggestions.status, status)))
+        .orderBy(desc(aiSuggestions.createdAt));
+    }
+    return db.select().from(aiSuggestions)
+      .where(eq(aiSuggestions.userId, userId))
+      .orderBy(desc(aiSuggestions.createdAt));
+  }
+
+  async createAiSuggestion(data: InsertAiSuggestion): Promise<AiSuggestion> {
+    const [suggestion] = await db.insert(aiSuggestions).values(data).returning();
+    return suggestion;
+  }
+
+  async updateAiSuggestionStatus(id: string, userId: string, status: string): Promise<AiSuggestion | undefined> {
+    const [suggestion] = await db.update(aiSuggestions)
+      .set({ status })
+      .where(and(eq(aiSuggestions.id, id), eq(aiSuggestions.userId, userId)))
+      .returning();
+    return suggestion;
+  }
+
+  async deleteAiSuggestion(id: string, userId: string): Promise<boolean> {
+    const result = await db.delete(aiSuggestions)
+      .where(and(eq(aiSuggestions.id, id), eq(aiSuggestions.userId, userId)))
+      .returning();
+    return result.length > 0;
+  }
+
+  async clearAiSuggestions(userId: string, status?: string): Promise<void> {
+    if (status) {
+      await db.delete(aiSuggestions)
+        .where(and(eq(aiSuggestions.userId, userId), eq(aiSuggestions.status, status)));
+    } else {
+      await db.delete(aiSuggestions)
+        .where(eq(aiSuggestions.userId, userId));
+    }
   }
 }
 

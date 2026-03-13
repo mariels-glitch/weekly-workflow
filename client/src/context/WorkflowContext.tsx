@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { startOfWeek, addWeeks, format } from "date-fns";
 
 interface Workstream {
   id: string;
@@ -27,6 +28,7 @@ interface Task {
   title: string;
   workstreamId: string;
   dayIndex: number;
+  weekOf: string | null;
   completed: boolean;
   labelIds: string[];
   priority: string;
@@ -40,6 +42,11 @@ interface WorkflowContextValue {
   workstreams: Workstream[];
   labels: WorkstreamLabel[];
   isLoading: boolean;
+  currentWeekStart: Date;
+  currentWeekOf: string;
+  goToPrevWeek: () => void;
+  goToNextWeek: () => void;
+  goToThisWeek: () => void;
   addTask: (task: Omit<Task, "id" | "userId">) => void;
   updateTask: (id: string, updates: Partial<Omit<Task, "id" | "userId">>) => void;
   deleteTask: (id: string) => void;
@@ -61,11 +68,25 @@ interface WorkflowContextValue {
 
 const WorkflowContext = createContext<WorkflowContextValue | null>(null);
 
+function getWeekOf(date: Date): string {
+  const monday = startOfWeek(date, { weekStartsOn: 1 });
+  return format(monday, "yyyy-MM-dd");
+}
+
 export function WorkflowProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
 
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() =>
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
+
+  const currentWeekOf = getWeekOf(currentWeekStart);
+
   const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"],
+    queryKey: ["/api/tasks", currentWeekOf],
+    queryFn: () =>
+      fetch(`/api/tasks?weekOf=${currentWeekOf}`, { credentials: "include" })
+        .then(r => r.json()),
   });
 
   const { data: workstreamsRaw = [], isLoading: wsLoading } = useQuery<Workstream[]>({
@@ -81,6 +102,18 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
   const workstreams = useMemo(() => {
     return [...workstreamsRaw].filter(ws => ws.isActive).sort((a, b) => a.order - b.order);
   }, [workstreamsRaw]);
+
+  const goToPrevWeek = useCallback(() => {
+    setCurrentWeekStart(d => addWeeks(d, -1));
+  }, []);
+
+  const goToNextWeek = useCallback(() => {
+    setCurrentWeekStart(d => addWeeks(d, 1));
+  }, []);
+
+  const goToThisWeek = useCallback(() => {
+    setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  }, []);
 
   const createTaskMutation = useMutation({
     mutationFn: (task: Omit<Task, "id" | "userId">) =>
@@ -147,8 +180,9 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
   });
 
   const addTask = useCallback((task: Omit<Task, "id" | "userId">) => {
-    createTaskMutation.mutate(task);
-  }, [createTaskMutation]);
+    const weekOf = task.dayIndex === -1 ? null : (task.weekOf ?? currentWeekOf);
+    createTaskMutation.mutate({ ...task, weekOf });
+  }, [createTaskMutation, currentWeekOf]);
 
   const updateTask = useCallback((id: string, updates: Partial<Omit<Task, "id" | "userId">>) => {
     updateTaskMutation.mutate({ id, updates });
@@ -169,8 +203,9 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
     if (!taskId || !newWorkstreamId || newDayIndex < -1 || newDayIndex > 6) {
       return;
     }
-    updateTaskMutation.mutate({ id: taskId, updates: { workstreamId: newWorkstreamId, dayIndex: newDayIndex } });
-  }, [updateTaskMutation]);
+    const weekOfValue = newDayIndex === -1 ? null : currentWeekOf;
+    updateTaskMutation.mutate({ id: taskId, updates: { workstreamId: newWorkstreamId, dayIndex: newDayIndex, weekOf: weekOfValue } });
+  }, [updateTaskMutation, currentWeekOf]);
 
   const addWorkstream = useCallback((workstream: Omit<Workstream, "id" | "userId" | "order">) => {
     createWsMutation.mutate(workstream);
@@ -225,6 +260,11 @@ export function WorkflowProvider({ children }: { children: React.ReactNode }) {
     workstreams,
     labels,
     isLoading,
+    currentWeekStart,
+    currentWeekOf,
+    goToPrevWeek,
+    goToNextWeek,
+    goToThisWeek,
     addTask,
     updateTask,
     deleteTask,

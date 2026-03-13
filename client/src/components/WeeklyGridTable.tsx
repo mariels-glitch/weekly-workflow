@@ -1,7 +1,17 @@
 import { useState } from "react";
-import { format, startOfWeek, addDays, isToday } from "date-fns";
+import { format, addDays, isToday } from "date-fns";
 import { Plus, ChevronDown, ChevronRight, Settings2, ExternalLink, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const DAY_TINTS = [
+  "var(--col-tint-pink)",
+  "var(--col-tint-mint)",
+  "var(--col-tint-beige)",
+  "var(--col-tint-lavender)",
+  "var(--col-tint-sky)",
+  "var(--col-tint-peach)",
+  "var(--col-tint-sage)",
+];
 import { useWorkflow } from "@/context/WorkflowContext";
 import TaskEditDialog from "./TaskEditDialog";
 import type { Task, Workstream } from "@/types/workflow";
@@ -39,10 +49,10 @@ function DraggableTaskCard({ task, onClick }: DraggableTaskCardProps) {
       ref={setNodeRef}
       className={cn(
         "group rounded-lg p-2 border cursor-pointer transition-all duration-150",
-        "hover:translate-y-[-1px] hover:shadow-lg hover:border-white/20",
+        "hover:translate-y-[-1px] hover:shadow-sm hover:border-border",
         task.completed 
           ? "bg-green-500/[0.05] border-green-500/20 opacity-60" 
-          : "bg-white/[0.03] border-white/[0.08]",
+          : "bg-card border-border",
         isDragging && "opacity-50 scale-95"
       )}
       onClick={onClick}
@@ -67,13 +77,13 @@ function DraggableTaskCard({ task, onClick }: DraggableTaskCardProps) {
             "w-4 h-4 mt-0.5 rounded border flex-shrink-0 flex items-center justify-center transition-all duration-150",
             task.completed
               ? "border-green-500/80"
-              : "border-white/30 bg-gradient-to-b from-white/10 to-white/[0.02]"
+              : "border-border bg-background"
           )}
           style={task.completed ? { background: "radial-gradient(circle at top, #32d74b, #00c853)" } : {}}
           data-testid={`checkbox-${task.id}`}
         >
           {task.completed && (
-            <div className="w-1.5 h-1.5 rounded-sm bg-[#0b0c10]" />
+            <div className="w-1.5 h-1.5 rounded-sm bg-white" />
           )}
         </button>
 
@@ -133,7 +143,7 @@ function TaskCardOverlay({ task }: { task: Task }) {
         "rounded-lg p-2 border shadow-2xl",
         task.completed 
           ? "bg-green-500/[0.15] border-green-500/40" 
-          : "bg-[#1a1b1f] border-white/20"
+          : "bg-card border-border"
       )}
       style={{ width: 180 }}
     >
@@ -200,7 +210,7 @@ function DroppableCell({ workstreamId, dayIndex, isToday: isTodayCell, onAddTask
     <div 
       ref={setNodeRef}
       className={cn(
-        "min-h-[80px] p-1.5 border-r border-b border-white/[0.06] transition-colors duration-200",
+        "min-h-[80px] p-1.5 border-r border-b border-border transition-colors duration-200",
         isTodayCell && "bg-primary/[0.03]",
         isOver && "bg-primary/[0.12] ring-1 ring-primary/30 ring-inset"
       )}
@@ -217,7 +227,7 @@ function DroppableCell({ workstreamId, dayIndex, isToday: isTodayCell, onAddTask
       </div>
       <button
         onClick={() => onAddTask(workstreamId, dayIndex)}
-        className="w-full mt-1 py-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground rounded hover:bg-white/[0.03] transition-all flex items-center justify-center gap-0.5"
+        className="w-full mt-1 py-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground rounded hover:bg-muted transition-all flex items-center justify-center gap-0.5"
         data-testid={`add-task-${workstreamId}-${dayIndex}`}
       >
         <Plus className="w-2.5 h-2.5" />
@@ -240,7 +250,7 @@ function WorkstreamRow({ workstream, weekDays, onAddTask, onEditTask }: Workstre
   return (
     <>
       <div 
-        className="sticky left-0 z-10 glassmorphic border-r border-b border-white/[0.06] p-2 min-w-[140px]"
+        className="sticky left-0 z-10 glassmorphic border-r border-b border-border p-2 min-w-[140px]"
         data-testid={`workstream-row-${workstream.id}`}
       >
         <button
@@ -275,7 +285,7 @@ function WorkstreamRow({ workstream, weekDays, onAddTask, onEditTask }: Workstre
       
       {!isExpanded && (
         <div 
-          className="col-span-7 border-b border-white/[0.06] h-8 bg-white/[0.01] cursor-pointer"
+          className="col-span-7 border-b border-border h-8 bg-muted/20 cursor-pointer"
           onClick={() => setIsExpanded(true)}
         />
       )}
@@ -299,10 +309,10 @@ function DroppableBacklog({ onAddTask, onEditTask }: DroppableBacklogProps) {
 
   return (
     <div
-      className="mt-4 glassmorphic rounded-[22px] border border-white/[0.08] shadow-xl relative overflow-hidden"
+      className="mt-4 glassmorphic rounded-[22px] border border-border shadow-sm relative overflow-hidden"
       data-testid="backlog-section"
     >
-      <div className="p-4 border-b border-white/[0.08]">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
@@ -315,7 +325,7 @@ function DroppableBacklog({ onAddTask, onEditTask }: DroppableBacklogProps) {
           </div>
           <button
             onClick={onAddTask}
-            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-white/[0.05]"
+            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-muted"
             data-testid="add-task-backlog"
           >
             <Plus className="w-3 h-3" />
@@ -365,8 +375,8 @@ export default function WeeklyGridTable({ onOpenSettings }: WeeklyGridTableProps
   const [newTaskContext, setNewTaskContext] = useState<{ workstreamId: string; dayIndex: number } | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const { currentWeekStart } = useWorkflow();
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -436,11 +446,11 @@ export default function WeeklyGridTable({ onOpenSettings }: WeeklyGridTableProps
     >
       <div className="space-y-0">
         <div 
-          className="glassmorphic rounded-[22px] border border-white/[0.08] shadow-xl relative overflow-hidden panel-glow"
+          className="glassmorphic rounded-[22px] border border-border shadow-sm relative overflow-hidden panel-glow"
           data-testid="weekly-grid-table"
         >
           <div className="relative z-10">
-            <div className="flex items-center justify-between gap-2.5 p-4 border-b border-white/[0.08]">
+            <div className="flex items-center justify-between gap-2.5 p-4 border-b border-border">
               <div>
                 <h2 className="text-[16px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Weekly Board
@@ -452,7 +462,7 @@ export default function WeeklyGridTable({ onOpenSettings }: WeeklyGridTableProps
               {onOpenSettings && (
                 <button
                   onClick={onOpenSettings}
-                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/[0.04] transition-all"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
                   data-testid="button-workstream-settings"
                 >
                   <Settings2 className="w-4 h-4" />
@@ -465,7 +475,7 @@ export default function WeeklyGridTable({ onOpenSettings }: WeeklyGridTableProps
                 className="grid min-w-[900px]"
                 style={{ gridTemplateColumns: "140px repeat(7, 1fr)" }}
               >
-                <div className="sticky left-0 top-0 z-20 glassmorphic border-r border-b border-white/[0.06] p-2">
+                <div className="sticky left-0 top-0 z-20 glassmorphic border-r border-b border-border p-2">
                   <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
                     Workstream
                   </span>
@@ -473,13 +483,15 @@ export default function WeeklyGridTable({ onOpenSettings }: WeeklyGridTableProps
                 
                 {weekDays.map((day, index) => {
                   const isTodayCol = isToday(day);
+                  const tint = DAY_TINTS[index % DAY_TINTS.length];
                   return (
                     <div 
                       key={index}
                       className={cn(
-                        "sticky top-0 z-10 border-r border-b border-white/[0.06] p-2 text-center",
-                        isTodayCol ? "bg-primary/[0.08]" : "bg-black/40"
+                        "sticky top-0 z-10 border-r border-b border-border p-2 text-center",
+                        isTodayCol && "bg-primary/[0.08]"
                       )}
+                      style={!isTodayCol ? { backgroundColor: `hsl(${tint})` } : undefined}
                       data-testid={`header-day-${index}`}
                     >
                       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">

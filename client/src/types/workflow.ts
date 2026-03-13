@@ -23,6 +23,7 @@ export interface Task {
   title: string;
   workstreamId: string;
   dayIndex: number;
+  weekOf: string | null;
   completed: boolean;
   labelIds: string[];
   priority: string;

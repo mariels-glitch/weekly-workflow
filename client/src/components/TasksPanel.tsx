@@ -41,7 +41,7 @@ export default function TasksPanel({ tasks, onAddTask, onToggleTask, onDeleteTas
 
   const headerActions = (
     <>
-      <div className="rounded-full bg-white/[0.04] border border-white/[0.12] px-2.5 py-1 inline-flex items-center gap-1.5">
+      <div className="rounded-full bg-card border border-border[0.12] px-2.5 py-1 inline-flex items-center gap-1.5">
         <TrendingUp className="w-3 h-3" />
         <span data-testid="text-weekly-stats">{completedCount} / {totalCount} complete</span>
       </div>

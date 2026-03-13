@@ -1,7 +1,17 @@
 import { useState, useMemo } from "react";
-import { format, startOfWeek, addDays, isToday } from "date-fns";
+import { format, addDays, isToday } from "date-fns";
 import { Plus, ExternalLink, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const DAY_TINTS = [
+  "var(--col-tint-pink)",
+  "var(--col-tint-mint)",
+  "var(--col-tint-beige)",
+  "var(--col-tint-lavender)",
+  "var(--col-tint-sky)",
+  "var(--col-tint-peach)",
+  "var(--col-tint-sage)",
+];
 import { useWorkflow } from "@/context/WorkflowContext";
 import TaskEditDialog from "./TaskEditDialog";
 import type { Task } from "@/types/workflow";
@@ -38,12 +48,14 @@ function DraggableKanbanCard({ task, onClick }: DraggableKanbanCardProps) {
   return (
     <div
       ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       className={cn(
-        "group rounded-xl p-2.5 border cursor-pointer transition-all duration-150",
-        "hover:translate-y-[-1px] hover:shadow-lg hover:border-white/20",
+        "group rounded-xl p-2.5 border cursor-grab active:cursor-grabbing transition-all duration-150",
+        "hover:translate-y-[-1px] hover:shadow-sm hover:border-border",
         task.completed 
           ? "bg-green-500/[0.05] border-green-500/20 opacity-70" 
-          : "bg-white/[0.03] border-white/[0.08]",
+          : "bg-card border-border",
         isDragging && "opacity-50 scale-95"
       )}
       onClick={onClick}
@@ -51,10 +63,7 @@ function DraggableKanbanCard({ task, onClick }: DraggableKanbanCardProps) {
     >
       <div className="flex items-start gap-2">
         <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity mt-0.5"
-          onClick={(e) => e.stopPropagation()}
+          className="opacity-0 group-hover:opacity-100 transition-opacity mt-0.5"
         >
           <GripVertical className="w-3 h-3 text-muted-foreground" />
         </div>
@@ -68,13 +77,13 @@ function DraggableKanbanCard({ task, onClick }: DraggableKanbanCardProps) {
             "w-4 h-4 mt-0.5 rounded-md border flex-shrink-0 flex items-center justify-center transition-all duration-150",
             task.completed
               ? "border-green-500/80"
-              : "border-white/30 bg-gradient-to-b from-white/10 to-white/[0.02]"
+              : "border-border bg-background"
           )}
           style={task.completed ? { background: "radial-gradient(circle at top, #32d74b, #00c853)" } : {}}
           data-testid={`button-toggle-kanban-${task.id}`}
         >
           {task.completed && (
-            <div className="w-2 h-2 rounded-sm bg-[#0b0c10]" />
+            <div className="w-2 h-2 rounded-sm bg-white" />
           )}
         </button>
 
@@ -102,7 +111,7 @@ function DraggableKanbanCard({ task, onClick }: DraggableKanbanCardProps) {
             )}
             {workstream && (
               <span
-                className="inline-flex items-center gap-1 text-[10px] rounded-full px-1.5 py-0.5 bg-white/[0.06] text-muted-foreground"
+                className="inline-flex items-center gap-1 text-[10px] rounded-full px-1.5 py-0.5 bg-muted text-muted-foreground"
               >
                 <span 
                   className="w-1.5 h-1.5 rounded-full" 
@@ -144,7 +153,7 @@ function KanbanCardOverlay({ task }: { task: Task }) {
         "rounded-xl p-2.5 border shadow-2xl",
         task.completed 
           ? "bg-green-500/[0.15] border-green-500/40" 
-          : "bg-[#1a1b1f] border-white/20"
+          : "bg-card border-border"
       )}
       style={{ width: 200 }}
     >
@@ -171,7 +180,7 @@ function KanbanCardOverlay({ task }: { task: Task }) {
             )}
             {workstream && (
               <span
-                className="inline-flex items-center gap-1 text-[10px] rounded-full px-1.5 py-0.5 bg-white/[0.06] text-muted-foreground"
+                className="inline-flex items-center gap-1 text-[10px] rounded-full px-1.5 py-0.5 bg-muted text-muted-foreground"
               >
                 <span 
                   className="w-1.5 h-1.5 rounded-full" 
@@ -241,10 +250,10 @@ function DroppableBacklog({ onAddTask, onEditTask }: DroppableBacklogProps) {
 
   return (
     <div
-      className="mt-4 glassmorphic rounded-[22px] border border-white/[0.08] shadow-xl relative overflow-hidden"
+      className="mt-4 glassmorphic rounded-[22px] border border-border shadow-sm relative overflow-hidden"
       data-testid="kanban-backlog-section"
     >
-      <div className="p-4 border-b border-white/[0.08]">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
@@ -257,7 +266,7 @@ function DroppableBacklog({ onAddTask, onEditTask }: DroppableBacklogProps) {
           </div>
           <button
             onClick={onAddTask}
-            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-white/[0.05]"
+            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-muted"
             data-testid="button-add-backlog-kanban"
           >
             <Plus className="w-3 h-3" />
@@ -303,8 +312,8 @@ export default function KanbanBoard() {
   const [newTaskContext, setNewTaskContext] = useState<{ workstreamId: string; dayIndex: number } | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const { currentWeekStart } = useWorkflow();
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -393,7 +402,7 @@ export default function KanbanBoard() {
       onDragEnd={handleDragEnd}
     >
       <div 
-        className="glassmorphic rounded-[22px] p-4 border border-white/[0.08] shadow-xl relative overflow-hidden panel-glow"
+        className="glassmorphic rounded-[22px] p-4 border border-border shadow-sm relative overflow-hidden panel-glow"
         data-testid="kanban-board"
       >
         <div className="relative z-10">
@@ -412,21 +421,25 @@ export default function KanbanBoard() {
             {weekDays.map((day, index) => {
               const dayTasks = getTasksForDay(index);
               const isTodayCol = isToday(day);
+              const tint = DAY_TINTS[index % DAY_TINTS.length];
               
               return (
                 <div 
                   key={index}
                   className={cn(
-                    "flex flex-col rounded-xl p-2 min-h-[300px]",
-                    "bg-white/[0.02] border border-white/[0.06]",
+                    "flex flex-col rounded-xl min-h-[300px]",
+                    "border border-border",
                     isTodayCol && "bg-primary/[0.04] border-primary/30"
                   )}
                   data-testid={`kanban-column-${index}`}
                 >
-                  <div className={cn(
-                    "text-center pb-2 mb-2 border-b border-white/[0.08]",
-                    isTodayCol && "border-primary/30"
-                  )}>
+                  <div 
+                    className={cn(
+                      "text-center p-2 rounded-t-xl border-b",
+                      isTodayCol ? "border-primary/30 bg-primary/[0.06]" : "border-border/50"
+                    )}
+                    style={!isTodayCol ? { backgroundColor: `hsl(${tint})` } : undefined}
+                  >
                     <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
                       {format(day, "EEE")}
                     </div>
@@ -443,6 +456,7 @@ export default function KanbanBoard() {
                     )}
                   </div>
 
+                  <div className="px-2 flex-1">
                   <DroppableColumn dayIndex={index} isTodayCol={isTodayCol}>
                     {dayTasks.map((task) => (
                       <DraggableKanbanCard
@@ -452,15 +466,16 @@ export default function KanbanBoard() {
                       />
                     ))}
                   </DroppableColumn>
+                  </div>
 
-                  <div className="mt-2 pt-2 border-t border-white/[0.06]">
+                  <div className="mx-2 mb-2 mt-2 pt-2 border-t border-border">
                     <button
                       onClick={() => handleAddTask(index)}
                       disabled={!hasActiveWorkstreams}
                       className={cn(
                         "w-full text-[11px] py-1.5 rounded-lg transition-all flex items-center justify-center gap-1",
                         hasActiveWorkstreams 
-                          ? "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground"
+                          ? "text-muted-foreground hover:bg-muted hover:text-foreground"
                           : "text-muted-foreground/40 cursor-not-allowed"
                       )}
                       data-testid={`button-add-card-${index}`}

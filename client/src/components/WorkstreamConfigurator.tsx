@@ -17,6 +17,21 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useWorkflow } from "@/context/WorkflowContext";
 import type { Workstream, WorkstreamLabel } from "@/types/workflow";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const PRESET_COLORS = [
   "#ff453a", "#ff9f0a", "#ffd60a", "#32d74b", "#64d2ff", 
@@ -50,12 +65,12 @@ function LabelEditor({ label, onUpdate, onDelete }: LabelEditorProps) {
       <Popover>
         <PopoverTrigger asChild>
           <button
-            className="w-4 h-4 rounded-full border border-white/20 flex-shrink-0"
+            className="w-4 h-4 rounded-full border border-border flex-shrink-0"
             style={{ backgroundColor: label.color }}
             data-testid={`color-picker-${label.id}`}
           />
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-2 glassmorphic border-white/[0.12]">
+        <PopoverContent className="w-auto p-2 glassmorphic border-border">
           <div className="grid grid-cols-5 gap-1">
             {PRESET_COLORS.map(color => (
               <button
@@ -63,7 +78,7 @@ function LabelEditor({ label, onUpdate, onDelete }: LabelEditorProps) {
                 onClick={() => onUpdate({ color })}
                 className={cn(
                   "w-6 h-6 rounded-full border-2 transition-all",
-                  label.color === color ? "border-white scale-110" : "border-transparent"
+                  label.color === color ? "border-foreground scale-110" : "border-transparent"
                 )}
                 style={{ backgroundColor: color }}
               />
@@ -78,7 +93,7 @@ function LabelEditor({ label, onUpdate, onDelete }: LabelEditorProps) {
           onChange={(e) => setName(e.target.value)}
           onBlur={handleSave}
           onKeyDown={(e) => e.key === "Enter" && handleSave()}
-          className="h-6 text-[11px] bg-black/40 border-white/[0.12] flex-1"
+          className="h-6 text-[11px] bg-muted/50 border-border flex-1"
           autoFocus
         />
       ) : (
@@ -114,6 +129,20 @@ function WorkstreamEditor({ workstream }: WorkstreamEditorProps) {
 
   const labels = getLabelsForWorkstream(workstream.id);
 
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: workstream.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   const handleSaveName = () => {
     if (name.trim()) {
       updateWorkstream(workstream.id, { name: name.trim() });
@@ -135,20 +164,31 @@ function WorkstreamEditor({ workstream }: WorkstreamEditorProps) {
 
   return (
     <div 
-      className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 space-y-3"
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className={cn(
+        "rounded-xl border border-border bg-muted/30 p-3 space-y-3",
+        isDragging && "opacity-50 shadow-lg"
+      )}
       data-testid={`workstream-editor-${workstream.id}`}
     >
       <div className="flex items-center gap-2">
-        <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
+        <div
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none"
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </div>
         
         <Popover>
           <PopoverTrigger asChild>
             <button
-              className="w-5 h-5 rounded-full border border-white/20 flex-shrink-0"
+              className="w-5 h-5 rounded-full border border-border flex-shrink-0"
               style={{ backgroundColor: workstream.color }}
             />
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-2 glassmorphic border-white/[0.12]">
+          <PopoverContent className="w-auto p-2 glassmorphic border-border">
             <div className="grid grid-cols-5 gap-1">
               {PRESET_COLORS.map(color => (
                 <button
@@ -156,7 +196,7 @@ function WorkstreamEditor({ workstream }: WorkstreamEditorProps) {
                   onClick={() => updateWorkstream(workstream.id, { color })}
                   className={cn(
                     "w-6 h-6 rounded-full border-2 transition-all",
-                    workstream.color === color ? "border-white scale-110" : "border-transparent"
+                    workstream.color === color ? "border-foreground scale-110" : "border-transparent"
                   )}
                   style={{ backgroundColor: color }}
                 />
@@ -171,7 +211,7 @@ function WorkstreamEditor({ workstream }: WorkstreamEditorProps) {
             onChange={(e) => setName(e.target.value)}
             onBlur={handleSaveName}
             onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
-            className="h-7 text-[12px] bg-black/40 border-white/[0.12] flex-1"
+            className="h-7 text-[12px] bg-muted/50 border-border flex-1"
             autoFocus
           />
         ) : (
@@ -220,7 +260,7 @@ function WorkstreamEditor({ workstream }: WorkstreamEditorProps) {
               onChange={(e) => setNewLabelName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAddLabel()}
               placeholder="Label name"
-              className="h-6 text-[11px] bg-black/40 border-white/[0.12] flex-1"
+              className="h-6 text-[11px] bg-muted/50 border-border flex-1"
               autoFocus
             />
             <Button size="sm" onClick={handleAddLabel} className="h-6 px-2 text-[10px]">
@@ -250,11 +290,25 @@ function WorkstreamEditor({ workstream }: WorkstreamEditorProps) {
 }
 
 export default function WorkstreamConfigurator({ isOpen, onClose }: WorkstreamConfiguratorProps) {
-  const { workstreams, addWorkstream } = useWorkflow();
+  const { workstreams, addWorkstream, reorderWorkstreams } = useWorkflow();
   const [showAddWorkstream, setShowAddWorkstream] = useState(false);
   const [newWorkstreamName, setNewWorkstreamName] = useState("");
 
   const allWorkstreams = [...workstreams].sort((a, b) => a.order - b.order);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = allWorkstreams.findIndex(w => w.id === active.id);
+    const newIndex = allWorkstreams.findIndex(w => w.id === over.id);
+    const reordered = arrayMove(allWorkstreams, oldIndex, newIndex);
+    reorderWorkstreams(reordered.map(w => w.id));
+  };
 
   const handleAddWorkstream = () => {
     if (newWorkstreamName.trim()) {
@@ -271,7 +325,7 @@ export default function WorkstreamConfigurator({ isOpen, onClose }: WorkstreamCo
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent 
-        className="glassmorphic border-white/[0.12] max-w-lg max-h-[80vh] overflow-auto"
+        className="glassmorphic border-border max-w-lg max-h-[80vh] overflow-auto"
         data-testid="workstream-configurator"
       >
         <DialogHeader>
@@ -282,18 +336,29 @@ export default function WorkstreamConfigurator({ isOpen, onClose }: WorkstreamCo
         </DialogHeader>
 
         <div className="space-y-3 mt-2">
-          {allWorkstreams.map(workstream => (
-            <WorkstreamEditor key={workstream.id} workstream={workstream} />
-          ))}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={allWorkstreams.map(w => w.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {allWorkstreams.map(workstream => (
+                <WorkstreamEditor key={workstream.id} workstream={workstream} />
+              ))}
+            </SortableContext>
+          </DndContext>
 
           {showAddWorkstream ? (
-            <div className="rounded-xl border border-dashed border-white/[0.16] p-3 flex items-center gap-2">
+            <div className="rounded-xl border border-dashed border-border p-3 flex items-center gap-2">
               <Input
                 value={newWorkstreamName}
                 onChange={(e) => setNewWorkstreamName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddWorkstream()}
                 placeholder="Workstream name"
-                className="h-8 text-[12px] bg-black/40 border-white/[0.12] flex-1"
+                className="h-8 text-[12px] bg-muted/50 border-border flex-1"
                 autoFocus
               />
               <Button size="sm" onClick={handleAddWorkstream} className="gradient-primary">
@@ -310,7 +375,7 @@ export default function WorkstreamConfigurator({ isOpen, onClose }: WorkstreamCo
           ) : (
             <button
               onClick={() => setShowAddWorkstream(true)}
-              className="w-full rounded-xl border border-dashed border-white/[0.16] p-3 text-[12px] text-muted-foreground hover:text-foreground hover:border-white/30 transition-all flex items-center justify-center gap-1.5"
+              className="w-full rounded-xl border border-dashed border-border p-3 text-[12px] text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-all flex items-center justify-center gap-1.5"
               data-testid="button-add-workstream"
             >
               <Plus className="w-4 h-4" />
@@ -319,7 +384,7 @@ export default function WorkstreamConfigurator({ isOpen, onClose }: WorkstreamCo
           )}
         </div>
 
-        <div className="flex justify-end mt-4 pt-4 border-t border-white/[0.08]">
+        <div className="flex justify-end mt-4 pt-4 border-t border-border">
           <Button onClick={onClose} data-testid="button-done">
             Done
           </Button>

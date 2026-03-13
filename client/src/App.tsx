@@ -50,7 +50,7 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0b0c10] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -60,7 +60,7 @@ function AppContent() {
     const is401 = error.message?.includes("401");
     if (!is401) {
       return (
-        <div className="min-h-screen bg-[#0b0c10] flex items-center justify-center">
+        <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="text-center space-y-3">
             <p className="text-muted-foreground text-sm">Unable to connect to server</p>
             <button

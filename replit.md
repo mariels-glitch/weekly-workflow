@@ -83,7 +83,8 @@ Preferred communication style: Simple, everyday language.
 - `verification_codes`: id (UUID), email, code, expiresAt, used
 - `workstreams`: id (UUID), userId (FK), name, color, order, isActive
 - `labels`: id (UUID), userId (FK), workstreamId (FK with cascade delete), name, color
-- `tasks`: id (UUID), userId (FK), title, workstreamId (FK with cascade delete), dayIndex (-1=backlog, 0-6=Mon-Sun), completed, labelIds (text[]), priority, description, externalLink, timeEstimate
+- `tasks`: id (UUID), userId (FK), title, workstreamId (FK with cascade delete), dayIndex (-1=backlog, 0-6=Mon-Sun), weekOf (nullable text, ISO Monday date e.g. "2026-03-09"), completed, labelIds (text[]), priority, description, externalLink, timeEstimate
+- `ai_suggestions`: id (UUID), userId (FK), title, description, suggestedWorkstreamId (FK set null on delete), suggestedDayIndex, priority, source (gmail/slack/jira/general), sourcePreview, status (pending/accepted/declined), createdAt
 - All IDs are varchar with gen_random_uuid() defaults
 - Insert schemas generated via drizzle-zod with auto-generated fields omitted
 
@@ -110,6 +111,14 @@ Preferred communication style: Simple, everyday language.
 - `GET/POST /api/tasks` - List/create tasks
 - `PATCH/DELETE /api/tasks/:id` - Update/delete task
 
+**AI & Integration Routes** (all require auth):
+- `GET /api/integrations/status` - Get connection status for Gmail, Slack, Jira
+- `POST /api/integrations/:service/connect` - Placeholder for OAuth connection
+- `GET /api/ai/suggestions` - Get pending AI suggestions
+- `POST /api/ai/suggest` - Generate new AI task suggestions via Claude
+- `PATCH /api/ai/suggestions/:id/accept` - Accept suggestion (creates task)
+- `PATCH /api/ai/suggestions/:id/decline` - Decline suggestion
+
 ### Application Features
 
 **Task Management**:
@@ -118,6 +127,13 @@ Preferred communication style: Simple, everyday language.
 - Delete tasks
 - Drag-and-drop between days and workstreams (via @dnd-kit)
 - Backlog bucket (dayIndex=-1) for unscheduled tasks
+- Week navigation: prev/next/today buttons in the header; tasks are anchored to a specific calendar week via `weekOf` field
+
+**Week Navigation**:
+- Tasks are anchored to a specific week via the `weekOf` field (ISO date string of Monday, e.g. "2026-03-09")
+- Backlog tasks (dayIndex=-1) have weekOf=null and always appear regardless of week
+- Navigating weeks issues a fresh API query filtered to that week
+- Column day headers show actual calendar dates for the selected week
 
 **Views**:
 - Table view: Weekly grid with workstream rows and day columns
@@ -162,6 +178,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Routing & Navigation
 - **Wouter**: Lightweight client-side routing
+
+### AI
+- **@anthropic-ai/sdk**: Claude AI for generating task suggestions (via Replit AI Integrations)
 
 ### Date Handling
 - **date-fns**: Modern date utility library for formatting, comparison, and manipulation
